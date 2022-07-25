@@ -10,6 +10,7 @@ from tvm import tir
 from tvm.script.diagnostics import TVMDiagnosticCtx
 from typing import Any, Callable, Tuple
 
+from constraints import constraint, CV
 
 # def extract_impl_desc(input_mod: ast.Module, impl_name, desc_name):
 #     assert len(input_mod.funcs) == 1
@@ -30,6 +31,7 @@ from typing import Any, Callable, Tuple
 #     impl = from_source(str(impl))
 
 #     return
+
 
 Resource = namedtuple('Resource', ['name', 'count'])
 
@@ -110,3 +112,15 @@ def test_mma_intrin() -> Tuple[Callable, Callable]:
             )
 
     return desc, impl
+
+
+@constraint(CV('A') < 5)
+@constraint(CV('B') <= 5)
+def test_fn(A, B):
+    pass
+
+
+test_fn(4, 5)
+
+
+test_fn(5, 6)
