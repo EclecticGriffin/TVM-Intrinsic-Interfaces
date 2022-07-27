@@ -39,14 +39,6 @@ class IntrinsicDeclaration:
     impl: PrimFunc
     name: str
 
-    def __call__(self, *args: Any, **kwds: Any) -> Any:
-        """
-        This does literally nothing, please do not call it. This exists only
-        because these declarations are meant to replace function definitions
-        through a decorator
-        """
-        pass
-
 
 Resource = namedtuple('Resource', ['name', 'count'])
 
