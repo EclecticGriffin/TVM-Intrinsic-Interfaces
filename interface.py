@@ -136,7 +136,7 @@ create_interface = IntrinsicInterface.create_interface
 
 @consumes('test resource', 5)
 @function
-def test_mma_intrin() -> Tuple[Callable, Callable]:
+def test_mma_intrin():
     @T.prim_func
     def desc(a: T.handle, b: T.handle, c: T.handle) -> None:
         A = T.match_buffer(a, (16, 16), align=128, offset_factor=1)
