@@ -1,5 +1,5 @@
 from collections import namedtuple
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import inspect
 import dis
 from functools import wraps, partial
@@ -8,9 +8,11 @@ from tvm.tir.function import PrimFunc
 from tvm.script import tir as T, from_source
 from tvm import tir
 from tvm.script.diagnostics import TVMDiagnosticCtx
-from typing import Any, Callable, Dict, Tuple
+from typing import Any, Callable, Dict, List, Set, Tuple
 
 from constraints import constraint, CV, CC
+
+Resource = namedtuple('Resource', ['name', 'count'])
 
 
 @dataclass
@@ -18,9 +20,7 @@ class IntrinsicDeclaration:
     desc: PrimFunc
     impl: PrimFunc
     name: str
-
-
-Resource = namedtuple('Resource', ['name', 'count'])
+    consumes: Set[Resource] = field(default_factory=set)
 
 
 def consumes(resource_name, count=1):
