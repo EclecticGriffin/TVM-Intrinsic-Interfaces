@@ -64,6 +64,10 @@ def test_fn():
     return desc, impl
 
 
+def gen_elementwise(a_shape, b_shape):
+    pass
+
+
 if __name__ == '__main__':
     print(EthosUInterface.registry)
     print(BadIdeaInterface.resources)

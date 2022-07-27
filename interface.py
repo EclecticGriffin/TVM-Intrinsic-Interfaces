@@ -79,7 +79,7 @@ class IntrinsicInterface:
 
         return inner
 
-    def add_resource(self, name: str, count: int):
+    def set_resource(self, name: str, count: int):
         self.resources[name] = count
 
     @staticmethod
@@ -122,10 +122,11 @@ class IntrinsicInterface:
         class WrappedIntrinsicInterface(cls):
             _inner = inner
             registry = _inner.registry
+            function = _inner.function
 
-            @classmethod
-            def function(cls, *args, **kwargs):
-                return cls._inner.function(*args, **kwargs)
+            # @classmethod
+            # def function(cls, *args, **kwargs):
+            #     return cls._inner.function(*args, **kwargs)
 
         return WrappedIntrinsicInterface
 
