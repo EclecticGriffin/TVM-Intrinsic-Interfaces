@@ -11,7 +11,7 @@ EthosUInterface = IntrinsicInterface('EthosUInterface')
 
 
 @IntrinsicInterface.create_interface
-class MistakeInterface:
+class BadIdeaInterface:
     mine: List[Any] = []
 
 
@@ -59,5 +59,5 @@ def test_fn():
 
 if __name__ == '__main__':
     print(EthosUInterface.registry)
-    print(MistakeInterface.__dict__)
-    print(MistakeInterface.mine)
+    print(BadIdeaInterface.__dict__)
+    print(BadIdeaInterface.mine)

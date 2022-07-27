@@ -12,26 +12,6 @@ from typing import Any, Callable, Dict, Tuple
 
 from constraints import constraint, CV, CC
 
-# def extract_impl_desc(input_mod: ast.Module, impl_name, desc_name):
-#     assert len(input_mod.funcs) == 1
-#     tir_prefix = ['T', 'tir']
-
-#     _name, outer_fn = list(input_mod.funcs.items())[0]
-
-#     impl, desc = None, None
-
-#     for stmt in outer_fn.body.stmts:
-#         if isinstance(stmt, ast.Function):
-#             if stmt.name == impl_name:
-#                 impl = stmt
-#             elif stmt.name == desc_name:
-#                 desc = stmt
-
-#     desc = from_source(str(desc))
-#     impl = from_source(str(impl))
-
-#     return
-
 
 @dataclass
 class IntrinsicDeclaration:
