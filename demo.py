@@ -4,7 +4,7 @@ from tvm.ir.module import IRModule
 from tvm.script import tir as T
 import numpy as np
 
-from interface import IntrinsicInterface
+from interface import IntrinsicInterface, Resource, consumes
 
 
 EthosUInterface = IntrinsicInterface('EthosUInterface')
@@ -12,10 +12,17 @@ EthosUInterface = IntrinsicInterface('EthosUInterface')
 
 @IntrinsicInterface.create_interface
 class BadIdeaInterface:
-    mine: List[Any] = []
+    resources = {'test_resource': 1}
 
 
-@EthosUInterface.function
+@IntrinsicInterface.create_interface
+class BadIdeaInterface2:
+    resources = [('test_resource2', 4)]
+
+
+@consumes('test_resource2')
+@consumes('test_resource')
+@BadIdeaInterface.function
 def test_fn():
     @T.prim_func
     def desc(a: T.handle, b: T.handle, c: T.handle) -> None:
@@ -59,5 +66,6 @@ def test_fn():
 
 if __name__ == '__main__':
     print(EthosUInterface.registry)
-    print(BadIdeaInterface.__dict__)
-    print(BadIdeaInterface.mine)
+    print(BadIdeaInterface.resources)
+    print(BadIdeaInterface2.resources)
+    print(test_fn.consumes)

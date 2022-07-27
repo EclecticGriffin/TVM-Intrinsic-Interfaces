@@ -8,28 +8,32 @@ from tvm.tir.function import PrimFunc
 from tvm.script import tir as T, from_source
 from tvm import tir
 from tvm.script.diagnostics import TVMDiagnosticCtx
-from typing import Any, Callable, Dict, List, Set, Tuple
+from typing import Any, Callable, Dict, Iterable, List, Tuple
 
 from constraints import constraint, CV, CC
 
 Resource = namedtuple('Resource', ['name', 'count'])
 
 
-@dataclass
+@dataclass(frozen=True)
 class IntrinsicDeclaration:
     desc: PrimFunc
     impl: PrimFunc
     name: str
-    consumes: Set[Resource] = field(default_factory=set)
+    consumes: List[Resource] = field(default_factory=list)
 
 
 def consumes(resource_name, count=1):
     def decorator(func):
-        if hasattr(func, 'consumes'):
-            func.consumes.add(Resource(resource_name, count))
+        if hasattr(func, 'consumes') and isinstance(func.consumes, list):
+            func.consumes.append(Resource(resource_name, count))
+        elif hasattr(func, 'consumes'):
+            raise TypeError(
+                f'Consumes decorator expects the consumes attribute to be a list, but got {type(func.consumes)}'
+            )
         else:
-            func.consumes = set()
-            func.consumes.add(Resource(resource_name, count))
+            func.consumes = list()
+            func.consumes.append(Resource(resource_name, count))
         return func
 
     return decorator
@@ -47,15 +51,22 @@ def function(func=None, *, name=None):
 
     tir.TensorIntrin.register(name, desc, impl)
     inner = IntrinsicDeclaration(desc, impl, name)
+
+    if hasattr(func, 'consumes'):
+        inner.consumes.extend(func.consumes)
+
     return inner
 
 
 class IntrinsicInterface:
     registry: Dict[str, IntrinsicDeclaration]
+    name: str
+    resources: Dict[str, int]
 
     def __init__(self, name):
         self.registry = dict()
         self.name = name
+        self.resources = dict()
 
     def function(self, func=None, *, name=None):
         if func is None:
@@ -68,6 +79,9 @@ class IntrinsicInterface:
 
         return inner
 
+    def add_resource(self, name: str, count: int):
+        self.resources[name] = count
+
     @staticmethod
     def create_interface(cls):
         """
@@ -76,8 +90,37 @@ class IntrinsicInterface:
         initializing an IntrinsicInterface
         """
 
+        inner = IntrinsicInterface(cls.__name__)
+        if hasattr(cls, 'resources'):
+            # the validation code in these if-arms is inefficient but given that
+            # these resource dicts are unlikely to be all that large this is
+            # fine for the time being. If the need arises these can be converted
+            # to a more efficient but less readable single pass version
+
+            if isinstance(cls.resources, dict) and all(
+                (
+                    isinstance(key, str) and isinstance(value, int)
+                    for key, value in cls.resources.items()
+                )
+            ):
+                inner.resources = cls.resources
+            elif isinstance(cls.resources, Iterable) and all(
+                (
+                    isinstance(item, (Resource, tuple)) and len(item) == 2
+                    for item in cls.resources
+                )
+            ):
+                inner.resources = {key: value for key, value in cls.resources}
+                cls.resources = inner.resources
+            else:
+                raise TypeError(
+                    'the resources field must be a dictionary with string keys and int values or an Iterable of valid Resource tuples'
+                )
+        else:
+            cls.resources = inner.resources
+
         class WrappedIntrinsicInterface(cls):
-            _inner = IntrinsicInterface(cls.__name__)
+            _inner = inner
             registry = _inner.registry
 
             @classmethod
@@ -85,6 +128,10 @@ class IntrinsicInterface:
                 return cls._inner.function(*args, **kwargs)
 
         return WrappedIntrinsicInterface
+
+
+# friendly alias
+create_interface = IntrinsicInterface.create_interface
 
 
 @consumes('test resource', 5)
