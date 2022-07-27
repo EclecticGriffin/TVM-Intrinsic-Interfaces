@@ -1,14 +1,10 @@
 from collections import namedtuple
 from dataclasses import dataclass, field
-import inspect
-import dis
 from functools import wraps, partial
-
 from tvm.tir.function import PrimFunc
-from tvm.script import tir as T, from_source
+from tvm.script import tir as T
 from tvm import tir
-from tvm.script.diagnostics import TVMDiagnosticCtx
-from typing import Any, Callable, Dict, Iterable, List, Tuple
+from typing import Dict, Iterable, List
 
 from constraints import constraint, CV, CC
 
