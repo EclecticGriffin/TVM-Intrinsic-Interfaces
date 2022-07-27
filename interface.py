@@ -1,14 +1,14 @@
 from collections import namedtuple
+from dataclasses import dataclass
 import inspect
-import synr
-from synr import ast
 import dis
 from functools import wraps, partial
 
+from tvm.tir.function import PrimFunc
 from tvm.script import tir as T, from_source
 from tvm import tir
 from tvm.script.diagnostics import TVMDiagnosticCtx
-from typing import Any, Callable, Tuple
+from typing import Any, Callable, Dict, Tuple
 
 from constraints import constraint, CV, CC
 
@@ -31,6 +31,21 @@ from constraints import constraint, CV, CC
 #     impl = from_source(str(impl))
 
 #     return
+
+
+@dataclass
+class IntrinsicDeclaration:
+    desc: PrimFunc
+    impl: PrimFunc
+    name: str
+
+    def __call__(self, *args: Any, **kwds: Any) -> Any:
+        """
+        This does literally nothing, please do not call it. This exists only
+        because these declarations are meant to replace function definitions
+        through a decorator
+        """
+        pass
 
 
 Resource = namedtuple('Resource', ['name', 'count'])
@@ -56,20 +71,48 @@ def function(func=None, *, name=None):
         return partial(function, name=name)
 
     name = name or func.__name__
-
     desc, impl = func()
 
     tir.TensorIntrin.register(name, desc, impl)
-
-    @wraps(func)
-    def inner(*args, **kwargs):
-        pass
-
-    inner.desc = desc
-    inner.impl = impl
-    inner.name = name
-
+    inner = IntrinsicDeclaration(desc, impl, name)
     return inner
+
+
+class IntrinsicInterface:
+    registry: Dict[str, IntrinsicDeclaration]
+
+    def __init__(self, name):
+        self.registry = dict()
+        self.name = name
+
+    def function(self, func=None, *, name=None):
+        if func is None:
+            return partial(self.function, name=name)
+
+        name = name or f'{self.name}_{func.__name__}'
+
+        inner = function(func, name=name)
+        self.registry[name] = inner
+
+        return inner
+
+    @staticmethod
+    def create_interface(cls):
+        """
+        Utility decorator used to turn a class declaration into an interface
+        object. It's probably better to just make the object directly by
+        initializing an IntrinsicInterface
+        """
+
+        class WrappedIntrinsicInterface(cls):
+            _inner = IntrinsicInterface(cls.__name__)
+            registry = _inner.registry
+
+            @classmethod
+            def function(cls, *args, **kwargs):
+                return cls._inner.function(*args, **kwargs)
+
+        return WrappedIntrinsicInterface
 
 
 @consumes('test resource', 5)
@@ -115,14 +158,14 @@ def test_mma_intrin() -> Tuple[Callable, Callable]:
     return desc, impl
 
 
-@constraint(CV('A') < 5)
-@constraint(CV('B') <= 5)
-# @constraint(CC(0) < CV('A') < 7)
-def test_fn(A, B):
-    pass
+# @constraint(CV('A') < 5)
+# @constraint(CV('B') <= 5)
+# # @constraint(CC(0) < CV('A') < 7)
+# def test_fn(A, B):
+#     pass
 
 
-test_fn(4, 5)
+# test_fn(4, 5)
 
 
-test_fn(5, 6)
+# test_fn(5, 6)
