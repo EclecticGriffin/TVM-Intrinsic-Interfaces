@@ -1,7 +1,7 @@
 from tvm.script import tir as T
 
 from interface import IntrinsicInterface, Resource, consumes
-
+from constraints import constraint, CV, CC
 
 EthosUInterface = IntrinsicInterface('EthosUInterface')
 EthosUInterface.set_resources_from_dict(
@@ -109,6 +109,13 @@ class alt_fn:
 
 # constraints
 def gen_elementwise(a_shape, b_shape):
+    pass
+
+
+@constraint(CV('a') < 10)
+@constraint(0 < CV('a'))
+@constraint(10 <= CV('b'))
+def constraint_example(a, b, c):
     pass
 
 
