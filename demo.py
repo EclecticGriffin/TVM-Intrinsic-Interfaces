@@ -109,6 +109,9 @@ class alt_fn:
 
 # constraints
 def gen_elementwise(a_shape, b_shape):
+    # do some stuff
+    # branch on rank maybe
+    # return an intrinsic declaration
     pass
 
 
