@@ -1,6 +1,6 @@
 from collections import namedtuple
 from dataclasses import dataclass, field
-from functools import wraps, partial
+from functools import singledispatch, wraps, partial
 from tvm.tir.function import PrimFunc
 from tvm.script import tir as T
 from tvm import tir
@@ -13,8 +13,8 @@ Resource = namedtuple('Resource', ['name', 'count'])
 
 @dataclass(frozen=True)
 class IntrinsicDeclaration:
-    desc: PrimFunc
-    impl: PrimFunc
+    desc: PrimFunc = field(repr=False)
+    impl: PrimFunc = field(repr=False)
     name: str
     consumes: List[Resource] = field(default_factory=list)
 
@@ -78,6 +78,15 @@ class IntrinsicInterface:
     def set_resource(self, name: str, count: int):
         self.resources[name] = count
 
+    def set_resources_from_dict(self, resource_dict: dict):
+        self.resources.update(
+            (
+                (key, value)
+                for key, value in resource_dict.items()
+                if isinstance(key, str) and isinstance(value, int)
+            )
+        )
+
     @staticmethod
     def create_interface(cls):
         """
@@ -120,25 +129,8 @@ class IntrinsicInterface:
             registry = _inner.registry
             function = _inner.function
 
-            # @classmethod
-            # def function(cls, *args, **kwargs):
-            #     return cls._inner.function(*args, **kwargs)
-
         return WrappedIntrinsicInterface
 
 
 # friendly alias
 create_interface = IntrinsicInterface.create_interface
-
-
-# @constraint(CV('A') < 5)
-# @constraint(CV('B') <= 5)
-# # @constraint(CC(0) < CV('A') < 7)
-# def test_fn(A, B):
-#     pass
-
-
-# test_fn(4, 5)
-
-
-# test_fn(5, 6)
