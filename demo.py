@@ -113,7 +113,7 @@ def gen_elementwise(a_shape, b_shape):
 
 
 @constraint(CV('a') < 10)
-@constraint(0 < CV('a'))
+@constraint(0 < CV('c'))
 @constraint(10 <= CV('b'))
 def constraint_example(a, b, c):
     pass
