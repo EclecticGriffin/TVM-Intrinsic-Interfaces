@@ -4,21 +4,27 @@ from interface import IntrinsicInterface, Resource, consumes
 
 
 EthosUInterface = IntrinsicInterface('EthosUInterface')
+EthosUInterface.set_resource('test_resource', 1)
+EthosUInterface.set_resources_from_dict(
+    {
+        'resource_A': 5,
+        'resource_B': 1,
+        'other_resource': 2,
+        'yet another resource': 12,
+        'test_resource': 2,
+        'test_resource2': 2,
+    }
+)
 
 
 @IntrinsicInterface.create_interface
-class BadIdeaInterface:
+class SecondInterface:
     resources = {'test_resource': 1}
-
-
-@IntrinsicInterface.create_interface
-class BadIdeaInterface2:
-    resources = [('test_resource2', 4)]
 
 
 @consumes('test_resource2')
 @consumes('test_resource')
-@BadIdeaInterface.function
+@EthosUInterface.function
 def test_fn():
     @T.prim_func
     def desc(a: T.handle, b: T.handle, c: T.handle) -> None:
@@ -60,12 +66,10 @@ def test_fn():
     return desc, impl
 
 
+# constraints
 def gen_elementwise(a_shape, b_shape):
     pass
 
 
 if __name__ == '__main__':
     print(EthosUInterface.registry)
-    print(BadIdeaInterface.resources)
-    print(BadIdeaInterface2.resources)
-    print(test_fn.consumes)
