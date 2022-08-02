@@ -3,8 +3,8 @@ from tvm.script import tir as T
 from interface import IntrinsicInterface, Resource, consumes
 from constraints import constraint, CV, CC
 
-EthosUInterface = IntrinsicInterface('EthosUInterface')
-EthosUInterface.set_resources_from_dict(
+TestInterface = IntrinsicInterface('TestInterface')
+TestInterface.set_resources_from_dict(
     {
         'resource_A': 5,
         'resource_B': 1,
@@ -23,7 +23,7 @@ class SecondInterface:
 
 @consumes('test_resource2')
 @consumes('test_resource')
-@EthosUInterface.function
+@TestInterface.function
 def test_fn():
     @T.prim_func
     def desc(a: T.handle, b: T.handle, c: T.handle) -> None:
@@ -67,7 +67,7 @@ def test_fn():
 
 @consumes('test_resource2')
 @consumes('test_resource')
-@EthosUInterface.function
+@TestInterface.function
 class alt_fn:
     @T.prim_func
     def desc(a: T.handle, b: T.handle, c: T.handle) -> None:
@@ -127,4 +127,4 @@ if __name__ == '__main__':
 
     pp = pprint.PrettyPrinter(indent=4)
 
-    pp.pprint(EthosUInterface.registry)
+    pp.pprint(TestInterface.registry)
