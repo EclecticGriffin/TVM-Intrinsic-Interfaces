@@ -52,11 +52,6 @@ def function(func=None, *, name=None, desc_name='desc', impl_name='impl'):
         desc = getattr(func, desc_name)
         impl = getattr(func, impl_name)
 
-        # if not isinstance(desc, PrimFunc):
-        #     desc = T.prim_func(desc)
-        # if not isinstance(impl, PrimFunc):
-        #     impl = T.prim_func(impl)
-
     else:
         desc, impl = func()
 
@@ -79,11 +74,24 @@ class IntrinsicInterface:
         self.name = name
         self.resources = dict()
 
-    def function(self, func=None, *, name=None, **kwargs):
+    def function(
+        self, func=None, *, name=None, no_name_prefix=False, **kwargs
+    ):
         if func is None:
-            return partial(self.function, name=name, **kwargs)
+            return partial(
+                self.function,
+                name=name,
+                no_name_prefix=no_name_prefix,
+                **kwargs,
+            )
 
         name = name or f'{self.name}_{func.__name__}'
+
+        if not name.startswith(self.name) and not no_name_prefix:
+            name = f'{self.name}_{name}'
+
+        if name in self.registry:
+            return self.registry[name]
 
         inner = function(func, name=name, **kwargs)
         self.registry[name] = inner
