@@ -1,6 +1,8 @@
 from collections import namedtuple
 from dataclasses import dataclass, field
 from functools import singledispatch, wraps, partial
+import inspect
+import itertools
 from tvm.tir.function import PrimFunc
 from tvm.script import tir as T
 from tvm import tir
@@ -64,6 +66,13 @@ def function(func=None, *, name=None, desc_name='desc', impl_name='impl'):
     return inner
 
 
+def number_box():
+    i = 1
+    while True:
+        yield i
+        i += 1
+
+
 class IntrinsicInterface:
     registry: Dict[str, IntrinsicDeclaration]
     name: str
@@ -73,25 +82,42 @@ class IntrinsicInterface:
         self.registry = dict()
         self.name = name
         self.resources = dict()
+        self._counter = number_box()
 
-    def function(
-        self, func=None, *, name=None, no_name_prefix=False, **kwargs
-    ):
+    def function(self, func=None, *, name=None, name_prefix=True, **kwargs):
+
         if func is None:
             return partial(
                 self.function,
                 name=name,
-                no_name_prefix=no_name_prefix,
+                name_prefix=name_prefix,
                 **kwargs,
             )
 
+        # this is a crime against humanity
+        parent_frame = None
+        frame_stack = inspect.stack()
+        if len(frame_stack) > 2:
+            for frame in frame_stack[2:]:
+                if frame.function == '_generator_decorator':
+                    parent_frame = frame.frame
+                    args = parent_frame.f_locals.get('_concrete_values')
+                    if args:
+                        name = name or (
+                            func.__name__
+                            + '_'
+                            + '_'.join([str(arg) for arg in args])
+                        )
+                    break
+
         name = name or f'{self.name}_{func.__name__}'
 
-        if not name.startswith(self.name) and not no_name_prefix:
+        if not name.startswith(self.name) and name_prefix:
             name = f'{self.name}_{name}'
 
-        if name in self.registry:
-            return self.registry[name]
+        assert (
+            name not in self.registry
+        ), f'An intrinsic named {name} has already been registered, a second intrinsic cannot be registered under the same name. If using a generator, please ensure that the generator produces a uniquely named intrinsic per each unique input set'
 
         inner = function(func, name=name, **kwargs)
         self.registry[name] = inner
@@ -153,6 +179,44 @@ class IntrinsicInterface:
             function = _inner.function
 
         return WrappedIntrinsicInterface
+
+
+def run_generator(**kwargs):
+    """
+    This decorator when given iterable keyword arguments will run the
+    annotated generator with the cartesian product of the input iterators.
+    """
+
+    product = itertools.product(*kwargs.values())
+
+    def _generator_decorator(func):
+        _name = 'test'
+        signature = inspect.signature(func)
+        arg_ordering = [
+            key
+            for key, value in signature.parameters.items()
+            if value.kind == value.POSITIONAL_ONLY
+        ]
+
+        for _concrete_values in product:
+            arg_dict = {
+                key: value
+                for key, value in zip(kwargs.keys(), _concrete_values)
+            }
+
+            args = [arg_dict[key] for key in arg_ordering]
+            arg_dict = {
+                key: value
+                for key, value in arg_dict.items()
+                if key not in arg_ordering
+            }
+            bound = signature.bind(*args, **arg_dict)
+            bound.apply_defaults()
+            func(*bound.args, **bound.kwargs)
+
+        return func
+
+    return _generator_decorator
 
 
 # friendly alias
