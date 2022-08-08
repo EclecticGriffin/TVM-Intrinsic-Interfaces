@@ -99,14 +99,21 @@ class IntrinsicInterface:
         frame_stack = inspect.stack()
         if len(frame_stack) > 2:
             for frame in frame_stack[2:]:
-                if frame.function == '_generator_decorator':
-                    parent_frame = frame.frame
-                    args = parent_frame.f_locals.get('_concrete_values')
-                    if args:
+                if (
+                    frame.function == '__call__'
+                    and 'self' in frame.frame.f_locals
+                    and isinstance(
+                        frame.frame.f_locals['self'], GeneratorWrapper
+                    )
+                ):
+                    args = frame.frame.f_locals['args']
+                    kwargs = frame.frame.f_locals['kwargs']
+                    if args or kwargs:
                         name = name or (
                             func.__name__
                             + '_'
-                            + '_'.join([str(arg) for arg in args])
+                            + '_'.join((str(arg) for arg in args))
+                            + '_'.join((str(val) for val in kwargs.values()))
                         )
                     break
 
@@ -181,16 +188,43 @@ class IntrinsicInterface:
         return WrappedIntrinsicInterface
 
 
+class GeneratorWrapper:
+    """
+    A wrapper class for functions which generate intrinsic implementations. Used
+    to handle automatic name mangling based on generator input
+    """
+
+    def __init__(self, wrapped_fn):
+        self._wrapped_fn = wrapped_fn
+
+    def __call__(self, *args, **kwargs):
+        self._wrapped_fn(*args, **kwargs)
+
+
+def generator(func):
+    """
+    Decorator for wrapping functions which generate intrinsic implementations
+    """
+    gen = GeneratorWrapper(func)
+    gen = wraps(func)(gen)
+    return gen
+
+
 def run_generator(**kwargs):
     """
     This decorator when given iterable keyword arguments will run the
     annotated generator with the cartesian product of the input iterators.
+
+    Note: wraps the generator function with the @generator wrapper if it has not
+    already been applied
     """
 
     product = itertools.product(*kwargs.values())
 
-    def _generator_decorator(func):
-        _name = 'test'
+    def decorator(func):
+        if not isinstance(func, GeneratorWrapper):
+            func = generator(func)
+
         signature = inspect.signature(func)
         arg_ordering = [
             key
@@ -198,10 +232,10 @@ def run_generator(**kwargs):
             if value.kind == value.POSITIONAL_ONLY
         ]
 
-        for _concrete_values in product:
+        for concrete_values in product:
             arg_dict = {
                 key: value
-                for key, value in zip(kwargs.keys(), _concrete_values)
+                for key, value in zip(kwargs.keys(), concrete_values)
             }
 
             args = [arg_dict[key] for key in arg_ordering]
@@ -216,7 +250,7 @@ def run_generator(**kwargs):
 
         return func
 
-    return _generator_decorator
+    return decorator
 
 
 # friendly alias

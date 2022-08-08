@@ -1,6 +1,12 @@
 from tvm.script import tir as T
 
-from interface import IntrinsicInterface, Resource, consumes, run_generator
+from interface import (
+    IntrinsicInterface,
+    Resource,
+    consumes,
+    run_generator,
+    generator,
+)
 from constraints import constraint, CV, CC
 
 TestInterface = IntrinsicInterface('TestInterface')
@@ -108,7 +114,7 @@ class alt_fn:
 
 
 @run_generator(a_shape=[1, 2, 3], b_shape=(x for x in range(0, 10)))
-def gen_elementwise(a_shape, b_shape, /):
+def gen_elementwise(a_shape, b_shape):
     @TestInterface.function
     class generated:
         @T.prim_func
@@ -160,6 +166,8 @@ def constraint_example(a, b, c):
 
 if __name__ == '__main__':
     import pprint
+
+    gen_elementwise(5, 124)
 
     pp = pprint.PrettyPrinter(indent=4)
 
