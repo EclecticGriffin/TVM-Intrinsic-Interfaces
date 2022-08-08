@@ -66,13 +66,6 @@ def function(func=None, *, name=None, desc_name='desc', impl_name='impl'):
     return inner
 
 
-def number_box():
-    i = 1
-    while True:
-        yield i
-        i += 1
-
-
 class IntrinsicInterface:
     registry: Dict[str, IntrinsicDeclaration]
     name: str
@@ -82,7 +75,6 @@ class IntrinsicInterface:
         self.registry = dict()
         self.name = name
         self.resources = dict()
-        self._counter = number_box()
 
     def function(self, func=None, *, name=None, name_prefix=True, **kwargs):
 
