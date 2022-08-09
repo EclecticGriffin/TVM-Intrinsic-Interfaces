@@ -87,7 +87,6 @@ class IntrinsicInterface:
             )
 
         # this is a crime against humanity
-        parent_frame = None
         frame_stack = inspect.stack()
         if len(frame_stack) > 2:
             for frame in frame_stack[2:]:
