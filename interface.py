@@ -88,25 +88,23 @@ class IntrinsicInterface:
 
         # this is a crime against humanity
         frame_stack = inspect.stack()
-        if len(frame_stack) > 2:
-            for frame in frame_stack[2:]:
-                if (
-                    frame.function == '__call__'
-                    and 'self' in frame.frame.f_locals
-                    and isinstance(
-                        frame.frame.f_locals['self'], GeneratorWrapper
-                    )
-                ):
-                    args = frame.frame.f_locals['args']
-                    kwargs = frame.frame.f_locals['kwargs']
-                    if args or kwargs:
-                        name = name or (
-                            func.__name__
-                            + '_'
-                            + '_'.join((str(arg) for arg in args))
-                            + '_'.join((str(val) for val in kwargs.values()))
-                        )
-                    break
+        if (
+            len(frame_stack) > 2
+            and frame_stack[2].function == '__call__'
+            and 'self' in frame_stack[2].frame.f_locals
+            and isinstance(
+                frame_stack[2].frame.f_locals['self'], GeneratorWrapper
+            )
+        ):
+            args = frame_stack[2].frame.f_locals['args']
+            kwargs = frame_stack[2].frame.f_locals['kwargs']
+            if args or kwargs:
+                name = name or (
+                    func.__name__
+                    + '_'
+                    + '_'.join((str(arg) for arg in args))
+                    + '_'.join((str(val) for val in kwargs.values()))
+                )
 
         name = name or f'{self.name}_{func.__name__}'
 
