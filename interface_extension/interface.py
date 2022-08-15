@@ -87,7 +87,8 @@ class IntrinsicInterface:
         # this is a crime against humanity
         frame_stack = inspect.stack()
         if (
-            len(frame_stack) > 2
+            not name
+            and len(frame_stack) > 2
             and frame_stack[2].function == '__call__'
             and 'self' in frame_stack[2].frame.f_locals
             and isinstance(
@@ -97,7 +98,7 @@ class IntrinsicInterface:
             args = frame_stack[2].frame.f_locals['args']
             kwargs = frame_stack[2].frame.f_locals['kwargs']
             if args or kwargs:
-                name = name or (
+                name = (
                     func.__name__
                     + '_'
                     + '_'.join((str(arg) for arg in args))
