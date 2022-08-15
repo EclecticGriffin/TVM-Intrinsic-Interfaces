@@ -113,7 +113,17 @@ class alt_fn:
             )
 
 
-@run_generator(a_shape=[1, 2, 3], b_shape=(x for x in range(0, 10)))
+def v1(a_shape, b_shape=None):
+    return a_shape < b_shape
+
+
+def v2(a_shape):
+    return a_shape % 2
+
+
+@run_generator(
+    a_shape=[1, 2, 3], b_shape=(x for x in range(0, 10)), _validators=[v1, v2]
+)
 def gen_elementwise(a_shape, b_shape):
     @TestInterface.function
     class generated:
@@ -153,8 +163,6 @@ def gen_elementwise(a_shape, b_shape):
                         dtype='handle',
                     )
                 )
-
-    pass
 
 
 @constraint(CV('a') < 10)
