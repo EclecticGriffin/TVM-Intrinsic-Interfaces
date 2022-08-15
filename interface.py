@@ -8,8 +8,6 @@ from tvm.script import tir as T
 from tvm import tir
 from typing import Dict, Iterable, List
 
-from constraints import constraint, CV, CC
-
 Resource = namedtuple('Resource', ['name', 'count'])
 
 
@@ -185,6 +183,7 @@ class GeneratorWrapper:
 
     def __init__(self, wrapped_fn):
         self._wrapped_fn = wrapped_fn
+        self.captured_output = []
 
     def __call__(self, *args, **kwargs):
         self._wrapped_fn(*args, **kwargs)
@@ -195,18 +194,31 @@ def generator(func):
     Decorator for wrapping functions which generate intrinsic implementations
     """
     gen = GeneratorWrapper(func)
+    # this is needed to ensure that signature introspection works properly
     gen = wraps(func)(gen)
     return gen
 
 
-def run_generator(**kwargs):
+def run_generator(_validators=None, **kwargs):
     """
     This decorator when given iterable keyword arguments will run the
     annotated generator with the cartesian product of the input iterators.
+    Optional validators may be supplied via the `_validators` argument. If
+    present, this decorator will skip over any argument lists which fail to pass
+    all validators.
+
+    Successful non-None values returned from the attached function will be
+    captured in the `captured_output` field of the returned function wrapper.
 
     Note: wraps the generator function with the @generator wrapper if it has not
     already been applied
     """
+
+    if _validators:
+        if not isinstance(_validators, Iterable):
+            _validators = [_validators]
+    else:
+        _validators = []
 
     product = itertools.product(*kwargs.values())
 
@@ -235,7 +247,36 @@ def run_generator(**kwargs):
             }
             bound = signature.bind(*args, **arg_dict)
             bound.apply_defaults()
-            func(*bound.args, **bound.kwargs)
+
+            passed_validation = True
+            for validator in _validators:
+                validator_signature = inspect.signature(validator)
+
+                val_args = []
+                val_kwargs = {}
+
+                for param_name, info in validator_signature.parameters.items():
+                    if info.kind in {
+                        info.POSITIONAL_ONLY,
+                        info.POSITIONAL_OR_KEYWORD,
+                    }:
+                        val_args.append(bound.arguments[param_name])
+                    elif info.kind == info.KEYWORD_ONLY:
+                        val_kwargs[param_name] = bound.arguments[param_name]
+                    else:
+                        raise ValueError(
+                            'validators may not contain variable positional or keyword arguments'
+                        )
+
+                result = validator(*val_args, **val_kwargs)
+                if not result:
+                    passed_validation = False
+                    break
+
+            if passed_validation:
+                output = func(*bound.args, **bound.kwargs)
+                if output is not None:
+                    func.captured_output.append(output)
 
         return func
 
