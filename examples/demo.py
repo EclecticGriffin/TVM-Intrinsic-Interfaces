@@ -1,13 +1,13 @@
 from tvm.script import tir as T
 
-from interface import (
+from interface_extension.interface import (
     IntrinsicInterface,
     Resource,
     consumes,
     run_generator,
     generator,
 )
-from constraints import constraint, CV, CC
+from interface_extension.constraints import constraint, CV, CC
 
 TestInterface = IntrinsicInterface('TestInterface')
 TestInterface.set_resources_from_dict(
